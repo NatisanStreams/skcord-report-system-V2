@@ -1,0 +1,96 @@
+function return(value: string) :: object:
+    return yaml value "%{_value}%" from "report"
+
+function webhook_message(reporter: player, accused: offlineplayer, reason: string, code: string):
+    parse if plugin "SkCord" is enabled:
+        set {_field1} to new field named "REPORTER:" and value "`%{_reporter}%`"
+        set {_field2} to new field named "REPORTED:" and value "`%{_accused}%`"
+        set {_field3} to new field named "REASON:" and value "`%{_reason}%`"
+        set {_field4} to new field named "CODE:" and value "`%{_code}%`"
+
+        create a new embed:
+            title: "PLAYER REPORT"
+            color: "##FF0000"
+            timestamp: true
+            fields: {_field1}, {_field2}, {_field3}, {_field4}
+            saveInto: {_embed}
+
+        create a new webhook message:
+            webhook: "%return("config.webhook-link")%"
+            message: "`%{_reporter}%` has reported `%{_accused}%`"
+            embed: {_embed}
+            username: "SKCORD REPORT SYSTEM"
+
+function GenerateCode():: string:
+    set {_code} to join return("config.code-numerical-value") random alphanumeric characters between "0" and "z" # YOU CAN CHANGE THE AMOUNT OF NUMERICAL VALUES THAT YOU LIKE TO HAVE
+    return {_code}
+
+on load:
+    load yaml "plugins/SkCord-Report-System/config.yml" as "report"
+    if yaml value "config.permission" from "report" is not set:
+        set yaml value "config.permission" from "report" to "ers.report"
+    if yaml value "config.permission-message" from "report" is not set:
+        set yaml value "config.permission-message" from "report" to "You have been blacklisted from using the report system"
+    if yaml value "config.prefix" from "report" is not set:
+        set yaml value "config.prefix" from "report" to "&f[&cREPORT&f]"
+    if yaml value "config.code-numerical-value" from "report" is not set:
+        set yaml value "config.code-numerical-value" from "report" to 6
+
+    if yaml value "config.webhook-link" from "report" is not set:
+        set yaml value "config.webhook-link" from "report" to "WEBHOOK-LINK-GOES-HERE"
+
+    if yaml list "reasons" from "report" is not set:
+        set {_reasons::*} to "Cheating", "X-Ray" and "Chat Conduct"
+        set yaml list "reasons" from "report" to {_reasons::*}
+
+    save yaml "report"
+
+on unload:
+    save yaml "report"
+    unload yaml "report"
+
+command /report <text> [<text>]:
+    trigger:
+        set {_prefix} to return("config.prefix")
+        if arg-1 is "reloadconfig":
+            if player does not have permission return("config.admin-permission"):
+                send "%{_prefix}% &cYou don't have permission for this command" to player
+            else:
+                unload yaml "report"
+                load yaml "plugins/SkCord-Report-System/config.yml" as "report"
+                save yaml "report"
+                if yaml "report" is loaded:
+                    send "%return("config.prefix")% &aCONFIG RELOADED"
+                else:
+                    send "&c[CRITICAL] ERROR RELOADING CONFIG" to player
+                    send "&c[CRITICAL] ERROR RELOADING CONFIG" to console
+        else:
+            if player does not have permission return("config.permission"):
+                send "%{_prefix}% %return("config.permission-message")%" to player
+            else:
+                set {_reasons::*} to yaml list "reasons" from "report"
+                set {_player} to player
+                set {_accused} to (arg-1 parsed as offlineplayer)
+
+                if {_reasons::*} contains arg-2:
+                    set {_reason} to arg-2
+                else:
+                    send "%{_prefix}% &fYou must select a reason" to player
+                    stop
+                
+                set {_code} to GenerateCode()
+
+                send "%{_prefix}% &eThank you for your report!" to player
+                send "%{_prefix}% &eUse your code to open a ticket to provide more evidence (optional)" to player
+                send "%{_prefix}% &eClick the code below to copy it" to player
+                send formatted "%{_prefix}% <copy:%{_code}%>&c&n%{_code}%" to player
+
+        
+                webhook_message({_player}, {_accused}, "%arg-2%", "%{_code}%")
+
+on tab complete of "/report":
+    if player has permission return("config.admin-permission"):
+        set tab completion for position 1 to "reloadconfig"
+    if tab arg-1 is not "reloadconfig":
+        set {_reasons::*} to yaml list "reasons" from "report"
+        set tab completion for position 2 to {_reasons::*}
