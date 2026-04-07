@@ -29,6 +29,8 @@ on load:
     load yaml "plugins/SkCord-Report-System/config.yml" as "report"
     if yaml value "config.permission" from "report" is not set:
         set yaml value "config.permission" from "report" to "ers.report"
+    if yaml value "config.admin-permission" from "report" is not set:
+        set yaml value "config.admin-permission" from "report" to "ers.report"
     if yaml value "config.permission-message" from "report" is not set:
         set yaml value "config.permission-message" from "report" to "You have been blacklisted from using the report system"
     if yaml value "config.prefix" from "report" is not set:
